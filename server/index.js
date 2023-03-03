@@ -5,6 +5,7 @@ import http from "http"
 import cors from 'cors'
 
 const user = [];
+const newUser = [];
 const exception = true;
 
 const app = express()
@@ -29,16 +30,54 @@ io.on('connection', (socket)=>{
         }else{
             socket.emit('status', true)
             user.push(name)
+            newUser.push({
+                userName: name,
+                user: socket.id
+            })
             console.log(user)
             io.emit('users', user);
         }
-    }) 
+    })
     
     socket.on('message', (message)=>{
         console.log(message)
+        let index = -1;
+        newUser.forEach((obj, i) => {
+          if (obj.user === socket.id) {
+            index = i;
+          }
+        });
         socket.broadcast.emit('message', {
             text: message,
-            user: socket.id
+            user: newUser[index].userName,
+            type:'message'
+        })
+    })
+
+    socket.on('private', (data)=>{
+        newUser.forEach((element)=>{
+            let userFinal = element.user;
+            if(element.userName === data.userDestiny){
+                io.to(userFinal).emit('privateMessage', {
+                    text: data.mensaje,
+                    user: ' [P/] '+data.userDestiny,
+                    type: 'message'
+                })
+            }
+        })
+    })
+
+    socket.on('files', (file) => {
+        let index = -1;
+        newUser.forEach((obj, i) => {
+          if (obj.user === socket.id) {
+            index = i;
+          }
+        });
+        socket.broadcast.emit('files', {
+            text: file,
+            user: newUser[index].userName,
+            type: 'file'
         })
     })
 
